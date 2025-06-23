@@ -1,5 +1,6 @@
 code.code-workspace
 .env
 venv
+pkg_uninstall
 qwen
 queries
