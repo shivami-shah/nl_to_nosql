@@ -24,10 +24,10 @@ def setup_logger(level=logging.INFO):
 
         today_date = datetime.now().strftime("%Y-%m-%d")
         log_file_name = f"log-{today_date}.log"
-        log_file_path = os.path.join(log_dir, log_file_name) # Combine directory and file name
+        log_file_path = os.path.join(log_dir, log_file_name)
 
         # Create a file handler
-        file_handler = logging.FileHandler(log_file_path, mode='a') # 'a' for append mode
+        file_handler = logging.FileHandler(log_file_path, mode='a')
         # Create a formatter for the file handler
         file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(file_formatter)
@@ -35,9 +35,9 @@ def setup_logger(level=logging.INFO):
 
         # --- Console Handler Setup ---
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO) # Console generally shows INFO and above
+        console_handler.setLevel(logging.INFO)
         # Create a formatter for the console handler
-        console_formatter = logging.Formatter('%(levelname)s: %(message)s') # Simpler format for console
+        console_formatter = logging.Formatter('%(levelname)s: %(message)s')
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
 
