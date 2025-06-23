@@ -2,5 +2,9 @@ code.code-workspace
 .env
 venv
 pkg_uninstall
+log_files
+__pycache__
+*.log
+*.pyc
 qwen
 queries
