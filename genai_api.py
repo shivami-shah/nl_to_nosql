@@ -24,7 +24,7 @@ def _read_prompt_from_file(file_path: str) -> str | None:
         return None
     
 
-def call_genai(prompt_source: str, is_file: bool = False) -> str | None:
+def call_genai(prompt_source: str, prompt_addon: str = None, is_file: bool = False) -> str | None:
     """
     Calls the Google GenAI API to generate content.
     Loads API_KEY and model from environment variables.
@@ -57,6 +57,10 @@ def call_genai(prompt_source: str, is_file: bool = False) -> str | None:
     if not prompt_content:
         logger.error("Prompt is empty. Please provide a valid prompt.")
         return None
+    
+    if prompt_addon:
+        prompt_content += f"\n{prompt_addon}"
+        logger.info(f"Addon to prompt applied.")
     
     try:
         logger.info(f"Attempting to call GenAI")
