@@ -30,7 +30,6 @@ if not query_types:
     logger.error("No query types found.")
     exit(1)
 
-
 for query_type in query_types:
 
     generated_queries = call_genai(prompt1_file, prompt_addon=query_type, is_file=True)
