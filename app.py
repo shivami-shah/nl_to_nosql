@@ -1,58 +1,63 @@
-import os
-from dotenv import load_dotenv
-import logging
-from project_logger import setup_logger
-from genai_api import call_genai
-from queries_type_processor import get_query_types
-from write_output import write_to_files
+# app.py
+from project_logger import setup_project_logger
+from QueryGenerator import QueryGenerator
+from APIManager import APIManager
+from DataCleaner import DataCleaner
+import os # Added for saving results
 
-load_dotenv()
-logger = setup_logger(os.getenv("LOG_LEVEL"))
-file_prefix = "ForecastAccuracy"
+class Orchestrator:
+    logger = setup_project_logger("Orchestrator")
 
-prompt1_file = os.getenv("PROMPT1_FILE")
-if not prompt1_file:
-    logger.error("PROMPT1_FILE not found in environment variables.")
-    exit(1)
+    def __init__(self):
+        self.query_generator = QueryGenerator()
+        self.api_manager = APIManager()
+        self.data_cleaner = DataCleaner()
 
-prompt2_file = os.getenv("PROMPT2_FILE")
-if not prompt2_file:
-    logger.error("PROMPT2_FILE not found in environment variables.")
-    exit(1)
+    def run_workflow(self):
+        self.logger.info("Starting LLM project workflow...")
 
-prompt3_file = os.getenv("PROMPT3_FILE")
-if not prompt3_file:
-    logger.error("PROMPT3_FILE not found in environment variables.")
-    exit(1)
+        # 1. Generate all prompt templates
+        self.logger.info("Generating chained prompt templates...")
+        all_template_sets = self.query_generator.generate_queries()
+        self.logger.info(f"Finished generating {len(all_template_sets)} sets of chained prompt templates.")
+
+        final_cleaned_results = []
+
+        for i, template_set in enumerate(all_template_sets):
+            collection_name = template_set["collection"]
+            query_type = template_set["query_type"]
+            prompt1_template = template_set["prompt1"]
+            prompt2_template = template_set["prompt2"]
+            prompt3_template = template_set["prompt3"]
+
+            self.logger.info(f"--- Processing combination {i+1}/{len(all_template_sets)}: "
+                             f"Collection: {collection_name}, query_type: {query_type}")
+
+            # 2. Send chained prompts to LLM and get final response
+            output_prompt1, output_prompt2, output_prompt3 = self.api_manager.send_chained_prompts_to_llm(
+                prompt1_template,
+                prompt2_template,
+                prompt3_template,
+                delay_between_steps_seconds=2 # Adjust delay as needed
+            )
+            
+            output = output_prompt1 + output_prompt2 + output_prompt3
+            self.data_cleaner.write_to_text(collection_name, query_type, output)
+            self.logger.info(f"--- Finished processing combination {i+1}/{len(all_template_sets)}")
+            
+            # Add an overall delay between processing each full chained set for different combinations
+            if i < len(all_template_sets) - 1:
+                self.logger.info(f"Pausing for 2 seconds before starting next combination's chained calls.")
+                time.sleep(2) # Adjust as needed for overall rate limiting if many combinations
+
+        self.logger.info("LLM project workflow completed.")
+        return final_cleaned_results
+
+if __name__ == "__main__":
+    import time # Ensure time is imported if using sleep in main for testing
+    orchestrator = Orchestrator()
+    start_time = time.time()
+    all_final_results = orchestrator.run_workflow()
+    end_time = time.time()
     
-query_types = get_query_types()
-if not query_types:
-    logger.error("No query types found.")
-    exit(1)
-
-for query_type in query_types:
-
-    generated_queries = call_genai(prompt1_file, prompt_addon=query_type, is_file=True)
-    if not generated_queries:
-        logger.error("Failed to get a response from GenAI. No queries generated.")
-        exit(1)
-        
-    prompt_addon = query_type + "\n\n\nQueries:\n" + generated_queries    
-    generated_questions = call_genai(prompt2_file, prompt_addon=prompt_addon, is_file=True)    
-    if not generated_questions:
-        logger.error("Failed to get a response from GenAI. No questions generated.")
-        exit(1)
-
-    generated_answers = call_genai(prompt3_file, prompt_addon=prompt_addon, is_file=True)
-    if not generated_answers:
-        logger.error("Failed to get a response from GenAI. No answers generated.")
-        exit(1)
-
-    file_suffix = query_type.replace(" ", "_").replace(".", "") + "_output.txt"
-
-    status = write_to_files(generated_queries, generated_questions, generated_answers, file_prefix, file_suffix)
-    if not status:
-        logger.error("Failed to write output files.")
-        exit(1)
-    else:
-        logger.info(f"Output files written successfully for query type: {query_type}")
+    orchestrator.logger.info(f"Total workflow time: {end_time - start_time:.2f} seconds.")

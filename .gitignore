@@ -1,4 +1,5 @@
-code.code-workspace
+*.code-workspace
+.vscode
 .env
 venv
 pkg_uninstall
@@ -7,6 +8,6 @@ __pycache__
 *.log
 *.pyc
 *.secrets
-queries
-output
-qwen
+old_code
+*.json
+*.txt
