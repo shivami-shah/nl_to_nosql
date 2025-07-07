@@ -1,64 +1,80 @@
-import os
-from DataReader import DataReader
-from config import COLLECTION_INFO_DIR
+import time
+from tenacity import RetryError
+from APIManager import APIManager
 from project_logger import setup_project_logger
 
 class QueryGenerator:
     logger = setup_project_logger("QueryGenerator")
     
     def __init__(self):
-        pass
-    
-    def _create_query_types_list(self, query_types:dict) -> list:
-        self.query_types_list = []
-        for query_type in query_types:
-            section_title = query_type["section"]
-            for subsection_title in query_type["subsections"]:
-                self.query_types_list.append(f"{section_title}\n{subsection_title}")
+        self.api_manager = APIManager()
 
-    
-    def generate_queries(self):        
-        reader = DataReader()
-        prompt1, prompt2, prompt3 = reader.read_prompts_files()
-        query_types = reader.read_query_types_file()
+    def send_chained_prompts_to_llm(
+        self,
+        prompt1_template: str,
+        prompt2_template: str,
+        prompt3_template: str,
+        delay_between_steps_seconds: int = 2
+    ) -> str | None:
+        """
+        Sends prompt1, then uses its output in prompt2, then uses prompt2's output in prompt3.
+        Includes delays and retries for each step.
+        """
+        self.logger.info("Starting chained LLM calls.")
         
-        self._create_query_types_list(query_types)
-        self.collections_info = [reader.read_collection_info_file(file) for file in os.listdir(COLLECTION_INFO_DIR)]
-        
-        all_template_sets = []
-        
-        for collection_info in self.collections_info:
-            collection_name = collection_info["name"]
-            schema = str(collection_info["schema"])
-            mappings = str(collection_info["mappings"])
-            nle = str(collection_info["nle"])
-            
-            prompt1 = prompt1.replace("COLLECTION_NAME", collection_name)
-            prompt1 = prompt1.replace("SCHEMA", schema)
-            prompt1 = prompt1.replace("NLE", nle)
-            
-            prompt2 = prompt2.replace("COLLECTION_NAME", collection_name)
-            prompt2 = prompt2.replace("SCHEMA", schema)
-            prompt2 = prompt2.replace("NLE", nle)
-            
-            prompt3 = prompt3.replace("COLLECTION_NAME", collection_name)
-            prompt3 = prompt3.replace("SCHEMA", schema)
-            prompt3 = prompt3.replace("NLE", nle)
-            
-            for query_type in self.query_types_list:
-                temp_prompt1 = prompt1.replace("TYPE_OF_QUERY", query_type)
-                temp_prompt2 = prompt2.replace("TYPE_OF_QUERY", query_type)
-                temp_prompt3 = prompt3.replace("TYPE_OF_QUERY", query_type)
-                
-                all_template_sets.append({"collection" : collection_name, "query_type": query_type,
-                                          "prompt1": temp_prompt1, "prompt2": temp_prompt2, 
-                                          "prompt3": temp_prompt3}
-                                        )
-            self.logger.info(f"Generated queries templates for {collection_name}")
-        self.logger.info(f"Finished generating queries templates")
-        return all_template_sets
+        # --- Step 1: Call with prompt1_template ---
+        self.logger.info("Calling LLM with Prompt 1: Queries Generation.")
+        output_prompt1 = None
+        try:
+            output_prompt1 = self.api_manager.call_llm_api(prompt1_template)
+            if not output_prompt1:
+                self.logger.error("Prompt 1 call failed or returned no text.")
+                return None
+            self.logger.debug(f"Output from Prompt 1: {output_prompt1[:100]}...") # Log first 100 chars
+        except RetryError as e:
+            self.logger.error(f"All retries failed for Prompt 1: {e}")
+            return None
+        except Exception as e:
+            self.logger.critical(f"An unexpected error occurred during Prompt 1 call: {e}", exc_info=True)
+            return None
 
+        time.sleep(delay_between_steps_seconds) # Delay before next step
 
-if __name__ == "__main__":
-    gen = QueryGenerator()
-    print(gen.generate_queries())
+        # --- Step 2: Call with prompt2_template, integrating output_prompt1 ---
+        self.logger.info("Calling LLM with Prompt 2: Questions Generation.")
+        prompt2_content = prompt2_template.replace("QUERIES", output_prompt1)
+        output_prompt2 = None
+        try:
+            output_prompt2 = self.api_manager.call_llm_api(prompt2_content)
+            if not output_prompt2:
+                self.logger.error("Prompt 2 call failed or returned no text.")
+                return None
+            self.logger.debug(f"Output from Prompt 2: {output_prompt2[:100]}...") # Log first 100 chars
+        except RetryError as e:
+            self.logger.error(f"All retries failed for Prompt 2: {e}")
+            return None
+        except Exception as e:
+            self.logger.critical(f"An unexpected error occurred during Prompt 2 call: {e}", exc_info=True)
+            return None
+            
+        time.sleep(delay_between_steps_seconds) # Delay before next step
+
+        # --- Step 3: Call with prompt3_template, integrating output_prompt2 ---
+        self.logger.info("Calling LLM with Prompt 3: Answer Generation.")
+        prompt3_content = prompt3_template.replace("QUERIES", output_prompt1)
+        final_output = None
+        try:
+            output_prompt3 = self.api_manager.call_llm_api(prompt3_content)
+            if not output_prompt3:
+                self.logger.error("Prompt 3 call failed or returned no text.")
+                return None
+            self.logger.debug(f"Final Output from Prompt 3: {output_prompt3[:100]}...") # Log first 100 chars
+        except RetryError as e:
+            self.logger.error(f"All retries failed for Prompt 3: {e}")
+            return None
+        except Exception as e:
+            self.logger.critical(f"An unexpected error occurred during Prompt 3 call: {e}", exc_info=True)
+            return None
+
+        self.logger.info("Chained LLM calls completed successfully.")
+        return output_prompt1, output_prompt2, output_prompt3
