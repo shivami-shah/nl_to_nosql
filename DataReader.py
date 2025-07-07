@@ -3,7 +3,7 @@ import csv
 from project_logger import setup_project_logger
 from config import(
     QUERY_TYPES_FILE, PROMPT1_FILE, PROMPT2_FILE, PROMPT3_FILE,
-    COLLECTION_INFO_DIR
+    COLLECTION_INFO_DIR, PROMPT_RESULT_DIR
 )
 
 class DataReader:
@@ -52,3 +52,6 @@ class DataReader:
         prompt2 = self._read_file(PROMPT2_FILE)
         prompt3 = self._read_file(PROMPT3_FILE)
         return prompt1, prompt2, prompt3
+    
+    def read_prompt_output_file(self, filename):
+        return self._read_file(PROMPT_RESULT_DIR / filename)

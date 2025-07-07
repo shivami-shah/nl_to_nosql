@@ -40,7 +40,7 @@ class Orchestrator:
             
             if output_prompt1 and output_prompt2 and output_prompt3:
                 output = f"QUERIES:\n{output_prompt1}\nQUESTIONS:\n{output_prompt2}\nANSWERS:\n{output_prompt3}"
-                self.data_cleaner.write_to_text(collection_name, query_type, output)
+                self.data_cleaner.write_prompt_output(collection_name, query_type, output)
                 self.logger.info(f"--- Finished processing and data written for {log_prefix}")
                 return True
             else:
@@ -84,7 +84,11 @@ class Orchestrator:
                 
                 self.logger.info(f"--- Progress: {processed_count}/{len(all_prompt_sets)} sets processed. ({successful_count} successful)")
                 
-        self.logger.info(f"LLM project workflow completed. {successful_count} out of {len(all_prompt_sets)} prompt sets processed successfully.")
+        self.logger.info(f"{successful_count} out of {len(all_prompt_sets)} prompt sets processed successfully.")
+        
+        self.logger.info("Data cleaning started.")
+        self.data_cleaner.clean_prompt_output()
+        self.logger.info("Data cleaning completed.")
         return True
 
 if __name__ == "__main__":
