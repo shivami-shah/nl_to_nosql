@@ -17,16 +17,16 @@ class Orchestrator:
         self.query_generator = QueryGenerator()
         self.data_cleaner = DataCleaner()
 
-    def _process_single_prompt_set(self, template_set: dict):
+    def _process_single_prompt_set(self, prompt_set: dict):
         """
         Helper method to process a single prompt set, including chained LLM calls
         and data writing. Designed to be run concurrently.
         """
-        collection_name = template_set["collection"]
-        query_type = template_set["query_type"]
-        prompt1 = template_set["prompt1"]
-        prompt2 = template_set["prompt2"]
-        prompt3 = template_set["prompt3"]
+        collection_name = prompt_set["collection"]
+        query_type = prompt_set["query_type"]
+        prompt1 = prompt_set["prompt1"]
+        prompt2 = prompt_set["prompt2"]
+        prompt3 = prompt_set["prompt3"]
 
         log_prefix = f"Collection: {collection_name}, Query Type: {query_type}"
         self.logger.info(f"--- Starting processing for {log_prefix}")
