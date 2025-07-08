@@ -19,12 +19,23 @@ class DataCleaner:
         except Exception as e:
             self.logger.error(f"Failed to write data to {filename}: {str(e)}")
             
-    def _write_to_csv(self, filename: str, list1:list, list2:list, list3:list):
+    def _write_to_csv(self, filename: str, *args):
+        lists_to_zip = []
+        for arg in args:
+            if isinstance(arg, list):
+                lists_to_zip.append(arg)
+            else:
+                self.logger.warning(f"Warning: Argument '{arg}' is not a list and will be skipped.")
+
+        if not lists_to_zip:
+            self.logger.warning("No lists found write to file.")
+            return
+        
         try:
             with open(filename, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(["Question", "Answer", "Query"])  # header row
-                for row in zip(list1, list2, list3):
+                for row in zip(*lists_to_zip):
                     writer.writerow(row)
             self.logger.info(f"Data written to {filename}")                
         except Exception as e:
@@ -97,8 +108,8 @@ class DataCleaner:
                 all_answers_list += answers_list
                 all_queries_list += query_list
                 
-            file = file.replace(".txt", ".csv")
-            self._write_to_csv(filename=OUTPUT_DIR / file, list1=all_questions_list, list2=all_answers_list, list3=all_queries_list)
+            output_file = file.replace(".txt", ".csv")
+            self._write_to_csv(OUTPUT_DIR / output_file, all_questions_list, all_answers_list, all_queries_list)
 
 if __name__ == "__main__":
     cleaner = DataCleaner()
