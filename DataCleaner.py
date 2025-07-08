@@ -26,7 +26,7 @@ class DataCleaner:
                 writer.writerow(["Question", "Answer", "Query"])  # header row
                 for row in zip(list1, list2, list3):
                     writer.writerow(row)
-                self.logger.info(f"Data written to {filename}")                
+            self.logger.info(f"Data written to {filename}")                
         except Exception as e:
             self.logger.error(f"Failed to write data to {filename}: {str(e)}")
 
@@ -55,6 +55,9 @@ class DataCleaner:
                     newlines_answers.append(i)
             
             queries = [query.strip() for query in queries if query.startswith("db.")]
+            all_questions_list = []
+            all_answers_list = []
+            all_queries_list = []
             
             for query in queries:
                 try:
@@ -79,10 +82,10 @@ class DataCleaner:
                 questions_list = [q for q in questions_list if "```" not in q]
                 questions_list = [q.replace("*", "").strip() for q in questions_list]
 
-                questions_list_append = ([c.replace("Question :","").strip() for c in answers_list if "Question" in c])
+                questions_list_append = ([c.split(":")[1].strip() for c in answers_list if "Question" in c])
                 questions_list += questions_list_append
                 
-                answers_list = [c.replace("Answer :","").strip() for c in answers_list if "Answer" in c]
+                answers_list = [c.split(":")[1].strip() for c in answers_list if "Answer" in c]
                 
                 extra_questions = len(questions_list) - len(answers_list)
                 answers_list_extra = [answers_list[0]] * extra_questions
@@ -90,8 +93,12 @@ class DataCleaner:
                 
                 query_list = [query]*len(questions_list)
                 
-                file = file.replace(".txt", ".csv")
-                self._write_to_csv(filename=OUTPUT_DIR / file, list1=questions_list, list2=answers_list, list3=query_list)
+                all_questions_list += questions_list
+                all_answers_list += answers_list
+                all_queries_list += query_list
+                
+            file = file.replace(".txt", ".csv")
+            self._write_to_csv(filename=OUTPUT_DIR / file, list1=all_questions_list, list2=all_answers_list, list3=all_queries_list)
 
 if __name__ == "__main__":
     cleaner = DataCleaner()
