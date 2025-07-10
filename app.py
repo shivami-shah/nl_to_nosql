@@ -7,7 +7,7 @@ from project_logger import setup_project_logger
 from PromptGenerator import PromptGenerator
 from QueryGenerator import QueryGenerator
 from DataCleaner import DataCleaner
-from config import MAX_WORKERS
+from config import MAX_WORKERS, ERROR_FILES_DIR, DB_ERRORS_DIR
 
 class Orchestrator:
     logger = setup_project_logger("Orchestrator")
@@ -56,6 +56,14 @@ class Orchestrator:
 
     def run_workflow(self):
         self.logger.info("Starting LLM project workflow...")
+        
+        # Delete all files in error directories
+        for filename in ERROR_FILES_DIR.iterdir():
+            if filename.is_file():
+                os.remove(filename)
+        for filename in DB_ERRORS_DIR.iterdir():
+            if filename.is_file():
+                os.remove(filename)
 
         # 1. Generate all prompt sets
         self.logger.info("Generating chained prompt templates...")

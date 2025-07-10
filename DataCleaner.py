@@ -1,8 +1,9 @@
 import csv
 import os
-from config import PROMPT_RESULT_DIR, OUTPUT_DIR, ERROR_FILES_DIR
+from config import PROMPT_RESULT_DIR, OUTPUT_DIR, ERROR_FILES_DIR, DB_ERRORS_DIR
 from project_logger import setup_project_logger
 from DataReader import DataReader
+from DBManager import DBManager
 
 class DataCleaner:
     logger = setup_project_logger("DataCleaner")
@@ -10,12 +11,21 @@ class DataCleaner:
     def __init__(self):
         self.output_dir = PROMPT_RESULT_DIR
         self.reader = DataReader()
+        self.db_manager = DBManager()
         
     def _write_to_file(self, content:str, filename: str):
         try:
             with open(filename, 'w') as file:
                 file.write(content)
             self.logger.info(f"Data written to {filename}")
+        except Exception as e:
+            self.logger.error(f"Failed to write data to {filename}: {str(e)}")
+            
+    def _append_to_file(self, content:str, filename: str):
+        try:
+            with open(filename, 'a') as file:
+                file.write(content)
+            self.logger.info(f"Data appended to {filename}")
         except Exception as e:
             self.logger.error(f"Failed to write data to {filename}: {str(e)}")
             
@@ -53,8 +63,29 @@ class DataCleaner:
         self.questions = self.content[queries_end_index:questions_end_index].split('\n')[1:]
         self.answers = self.content[questions_end_index:].split('\n')[1:]
         
+    def _validate_queries(self, file:str, mappings:dict):
+        invalid_queries = []
+        for query in self.queries:
+            if query.startswith("db."):
+                
+                # Replace actual field names from mappings
+                mapped_query = str(query)
+                for key, value in mappings.items():
+                    mapped_query = mapped_query.replace(f'{key}', f'{value}')
+
+                if not self.db_manager.validate_string_query(mapped_query):
+                    invalid_queries.append(mapped_query)
+                    self.queries.remove(query)
+            else:
+                self.queries.remove(query)
+                
+        # Convert the list "invalid_queries" to string, with each element in a new line
+        if len(invalid_queries) > 0:
+            invalid_queries_str = "\nINVALID QUERIES" + '\n' + '\n'.join(invalid_queries) + '\n'
+            self._append_to_file(invalid_queries_str, self.db_error_file_name)
+
     def _extract_to_lists(self):
-        
+                
         newlines_questions = []
         newlines_answers = []
         for i, text in enumerate(self.questions):
@@ -64,19 +95,20 @@ class DataCleaner:
             if len(text) == 0:
                 newlines_answers.append(i)
         
-        queries = [query.strip() for query in self.queries if query.startswith("db.")]
         self.all_questions_list = []
         self.all_answers_list = []
         self.all_queries_list = []
+        missing_questions_answers = []
         
-        for query in queries:
+        for query in self.queries:
             try:
                 questions_index = next(i for i, q in enumerate(self.questions) if query.lower() in q.lower())
                 answers_index = next(i for i, q in enumerate(self.answers) if query.lower() in q.lower())
             except StopIteration:
                 self.logger.warning(f"No question found with query: {query}")
+                missing_questions_answers.append(query)
                 continue
-                
+                       
             questions_list = []
             answers_list = []
             
@@ -111,21 +143,35 @@ class DataCleaner:
             self.all_questions_list += questions_list
             self.all_answers_list += answers_list
             self.all_queries_list += query_list
-    
+        
+        if len(missing_questions_answers)>0:
+            missing_questions_answers_str = "\nMISSING QUESTIONS OR ANSWERS:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
+            self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
+
     def clean_prompt_output(self):
-        # Delete all files in ERROR_FILES_DIR
-        for filename in ERROR_FILES_DIR.iterdir():
-            if filename.is_file():
-                os.remove(filename)
+
         for file in os.listdir(PROMPT_RESULT_DIR):
+            self.collection_name = file.split("_")[0]
+            mappings = self.reader.read_collection_info_file(f"{self.collection_name}.json")["mappings"]
+            self.db_error_file_name = DB_ERRORS_DIR / f"{self.collection_name}_invalid_queries.txt"
             try:
                 self.logger.info(f"\n\nPrompt output started processed for {file}")
                 self.content = self.reader.read_prompt_output_file(file)
                 
                 self._seperate_sections()
+                self._validate_queries(file, mappings)
                 self._extract_to_lists()
                 output_file = file.replace(".txt", ".csv")
-                self._write_to_csv(OUTPUT_DIR / output_file, self.all_questions_list, self.all_answers_list, self.all_queries_list)
+                
+                actual_query_list = []
+                for query in self.all_queries_list:
+                    # Replace actual field names from mappings
+                    for key, value in mappings.items():
+                        query = str(query).replace(key, value)
+                    actual_query_list.append(query)
+                
+                self._write_to_csv(OUTPUT_DIR / output_file, self.all_questions_list, self.all_answers_list, actual_query_list)
+                self._write_to_file
                
             except Exception as e:
                 src = PROMPT_RESULT_DIR / file
@@ -136,5 +182,13 @@ class DataCleaner:
 
 
 if __name__ == "__main__":
+    # Delete all files in error directories
+    for filename in ERROR_FILES_DIR.iterdir():
+        if filename.is_file():
+            os.remove(filename)
+    for filename in DB_ERRORS_DIR.iterdir():
+        if filename.is_file():
+            os.remove(filename)
+            
     cleaner = DataCleaner()
     cleaner.clean_prompt_output()
