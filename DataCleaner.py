@@ -1,6 +1,10 @@
 import csv
+import re
 import os
-from config import PROMPT_RESULT_DIR, OUTPUT_DIR, ERROR_FILES_DIR, DB_ERRORS_DIR
+from config import (
+    PROMPT_RESULT_DIR, OUTPUT_DIR,
+    ERROR_FILES_DIR, DB_ERRORS_DIR,
+    OUTPUT_CSV_DIR)
 from project_logger import setup_project_logger
 from DataReader import DataReader
 from DBManager import DBManager
@@ -9,7 +13,6 @@ class DataCleaner:
     logger = setup_project_logger("DataCleaner")
     
     def __init__(self):
-        self.output_dir = PROMPT_RESULT_DIR
         self.reader = DataReader()
         self.db_manager = DBManager()
         
@@ -52,7 +55,8 @@ class DataCleaner:
             self.logger.error(f"Failed to write data to {filename}: {str(e)}")
 
     def write_prompt_output(self, collection_name: str, query_type:str, output: str):
-        query_type = ''.join(filter(str.isalpha, query_type))
+        numbers = re.findall(r'\d+', query_type.replace(".", ""))
+        query_type = '_'.join(numbers)
         file_name = PROMPT_RESULT_DIR / f"{collection_name}_{query_type}.txt"
         self._write_to_file(output, file_name)
     
@@ -162,19 +166,25 @@ class DataCleaner:
                 
                 self._seperate_sections()
                 self._validate_queries(file, mappings)
-                self._extract_to_lists()
+                
                 output_file = file.replace(".txt", ".csv")
-                
-                mapped_query_list = []
-                for query in self.all_queries_list:
-                    # Replace actual field names from mappings
-                    for key, value in mappings.items():
-                        query = str(query).replace(key, value)
-                    mapped_query_list.append(query)
-                
-                self._write_to_csv(OUTPUT_DIR / output_file, self.all_questions_list, self.all_answers_list, mapped_query_list)
-                self._write_to_file
-               
+                if len(self.queries) > 0:
+                    self._extract_to_lists()
+                    
+                    mapped_query_list = []
+                    for query in self.all_queries_list:
+                        # Replace actual field names from mappings
+                        for key, value in mappings.items():
+                            query = str(query).replace(key, value)
+                        mapped_query_list.append(query)
+                        
+                    self._write_to_csv(OUTPUT_CSV_DIR / output_file, self.all_questions_list, self.all_answers_list, mapped_query_list)
+                else:
+                    self.logger.info(f"No queries found for {file}")
+                    self.all_questions_list = []
+                    self.all_answers_list = []
+                    self._write_to_csv(ERROR_FILES_DIR / output_file, self.all_questions_list, self.all_answers_list, self.queries)
+
             except Exception as e:
                 src = PROMPT_RESULT_DIR / file
                 dest = ERROR_FILES_DIR / file

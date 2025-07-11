@@ -12,7 +12,8 @@ PROMPT_RESULT_DIR = DATA_DIR / "prompt_results"
 OUTPUT_DIR = DATA_DIR / "output"
 QUERIES_DIR = DATA_DIR / "queries"
 COLLECTION_INFO_DIR = DATA_DIR / "collection_info"
-ERROR_FILES_DIR = OUTPUT_DIR / "python_error_files"
+OUTPUT_CSV_DIR = OUTPUT_DIR / "output_csv"
+ERROR_FILES_DIR = OUTPUT_DIR / "error_files"
 DB_ERRORS_DIR = OUTPUT_DIR / "db_errors"
 
 # Ensure the directories exist
@@ -22,6 +23,7 @@ PROMPT_RESULT_DIR.mkdir(exist_ok=True)
 OUTPUT_DIR.mkdir(exist_ok=True)
 QUERIES_DIR.mkdir(exist_ok=True)
 COLLECTION_INFO_DIR.mkdir(exist_ok=True)
+OUTPUT_CSV_DIR.mkdir(exist_ok=True)
 ERROR_FILES_DIR.mkdir(parents=True, exist_ok=True)
 DB_ERRORS_DIR.mkdir(parents=True, exist_ok=True)
 
