@@ -7,7 +7,7 @@ class PromptGenerator:
     logger = setup_project_logger("PromptGenerator")
     
     def __init__(self):
-        pass
+        COLLECTION_INFO_DIR.mkdir(exist_ok=True)
     
     def _create_query_types_list(self, query_types:dict) -> list:
         self.query_types_list = []

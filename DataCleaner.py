@@ -13,6 +13,9 @@ class DataCleaner:
     logger = setup_project_logger("DataCleaner")
     
     def __init__(self):
+        PROMPT_RESULT_DIR.mkdir(exist_ok=True)
+        OUTPUT_DIR.mkdir(exist_ok=True)        
+        OUTPUT_CSV_DIR.mkdir(exist_ok=True)
         self.reader = DataReader()
         self.db_manager = DBManager()
         
@@ -153,7 +156,7 @@ class DataCleaner:
         if len(missing_questions_answers)>0:
             missing_questions_answers_str = "\nMISSING QUESTIONS OR ANSWERS:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
             self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
-
+            
     def clean_prompt_output(self):
 
         for file in os.listdir(PROMPT_RESULT_DIR):
