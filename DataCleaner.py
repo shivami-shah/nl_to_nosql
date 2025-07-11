@@ -93,7 +93,7 @@ class DataCleaner:
             invalid_queries_str = f"\nINVALID QUERIES-{file}\n" + '\n'.join(invalid_queries) + '\n'
             self._append_to_file(invalid_queries_str, self.db_error_file_name)
 
-    def _extract_to_lists(self):
+    def _extract_to_lists(self, file):
                 
         newlines_questions = []
         newlines_answers = []
@@ -153,8 +153,9 @@ class DataCleaner:
             self.all_answers_list += answers_list
             self.all_queries_list += query_list
         
+        # TODO: add file name to the heading
         if len(missing_questions_answers)>0:
-            missing_questions_answers_str = "\nMISSING QUESTIONS OR ANSWERS:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
+            missing_questions_answers_str = f"\nMISSING QUESTIONS OR ANSWERS-{file}:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
             self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
             
     def clean_prompt_output(self):
@@ -172,7 +173,7 @@ class DataCleaner:
                 
                 output_file = file.replace(".txt", ".csv")
                 if len(self.queries) > 0:
-                    self._extract_to_lists()
+                    self._extract_to_lists(file)
                     
                     mapped_query_list = []
                     for query in self.all_queries_list:
