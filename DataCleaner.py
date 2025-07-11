@@ -65,7 +65,7 @@ class DataCleaner:
         
     def _validate_queries(self, file:str, mappings:dict):
         invalid_queries = []
-        for query in self.queries:
+        for i, query in enumerate(self.queries):
             if query.startswith("db."):
                 
                 # Replace actual field names from mappings
@@ -73,15 +73,17 @@ class DataCleaner:
                 for key, value in mappings.items():
                     mapped_query = mapped_query.replace(f'{key}', f'{value}')
 
-                if not self.db_manager.validate_string_query(mapped_query):
+                validated_query = self.db_manager.validate_query(mapped_query)
+                if not validated_query:
                     invalid_queries.append(mapped_query)
-                    self.queries.remove(query)
+                    self.queries[i] = ""
             else:
-                self.queries.remove(query)
-                
+                self.queries[i] = ""
+        self.queries = list(filter(None, self.queries))   
+        
         # Convert the list "invalid_queries" to string, with each element in a new line
         if len(invalid_queries) > 0:
-            invalid_queries_str = "\nINVALID QUERIES" + '\n' + '\n'.join(invalid_queries) + '\n'
+            invalid_queries_str = f"\nINVALID QUERIES-{file}\n" + '\n'.join(invalid_queries) + '\n'
             self._append_to_file(invalid_queries_str, self.db_error_file_name)
 
     def _extract_to_lists(self):
@@ -155,7 +157,7 @@ class DataCleaner:
             mappings = self.reader.read_collection_info_file(f"{self.collection_name}.json")["mappings"]
             self.db_error_file_name = DB_ERRORS_DIR / f"{self.collection_name}_invalid_queries.txt"
             try:
-                self.logger.info(f"\n\nPrompt output started processed for {file}")
+                self.logger.info(f"Prompt output started processed for {file}")
                 self.content = self.reader.read_prompt_output_file(file)
                 
                 self._seperate_sections()
@@ -163,14 +165,14 @@ class DataCleaner:
                 self._extract_to_lists()
                 output_file = file.replace(".txt", ".csv")
                 
-                actual_query_list = []
+                mapped_query_list = []
                 for query in self.all_queries_list:
                     # Replace actual field names from mappings
                     for key, value in mappings.items():
                         query = str(query).replace(key, value)
-                    actual_query_list.append(query)
+                    mapped_query_list.append(query)
                 
-                self._write_to_csv(OUTPUT_DIR / output_file, self.all_questions_list, self.all_answers_list, actual_query_list)
+                self._write_to_csv(OUTPUT_DIR / output_file, self.all_questions_list, self.all_answers_list, mapped_query_list)
                 self._write_to_file
                
             except Exception as e:
