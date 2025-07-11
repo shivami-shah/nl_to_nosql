@@ -62,7 +62,7 @@ class QueryGenerator:
         # --- Step 3: Call with prompt3_template, integrating output_prompt2 ---
         self.logger.info("Calling LLM with Prompt 3: Answer Generation.")
         prompt3_content = prompt3_template.replace("QUERIES", output_prompt1)
-        final_output = None
+        output_prompt3 = None
         try:
             output_prompt3 = self.api_manager.call_llm_api(prompt3_content)
             if not output_prompt3:

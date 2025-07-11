@@ -141,7 +141,12 @@ class DataCleaner:
             questions_list_append = ([c.split(":")[1].strip() for c in answers_list if "Question" in c])
             questions_list += questions_list_append
             
-            answers_list = [c.split(":")[1].strip() for c in answers_list if "Answer" in c]
+            cleaned_answers_list = []
+            for line in answers_list:
+                if "Answer" in line:
+                    parts = line.split(':')
+                    cleaned_answers_list.append(':'.join(parts[1:]).strip())
+            answers_list = cleaned_answers_list
             
             extra_questions = len(questions_list) - len(answers_list)
             answers_list_extra = [answers_list[0]] * extra_questions
@@ -153,7 +158,6 @@ class DataCleaner:
             self.all_answers_list += answers_list
             self.all_queries_list += query_list
         
-        # TODO: add file name to the heading
         if len(missing_questions_answers)>0:
             missing_questions_answers_str = f"\nMISSING QUESTIONS OR ANSWERS-{file}:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
             self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
