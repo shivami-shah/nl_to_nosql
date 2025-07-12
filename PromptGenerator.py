@@ -19,11 +19,11 @@ class PromptGenerator:
     
     def generate_prompts(self):        
         reader = DataReader()
-        prompt1, prompt2, prompt3 = reader.read_prompts_files()
+        prompt1_template, prompt2_template, prompt3_template = reader.read_prompts_files()
         query_types = reader.read_query_types_file()
         
         self._create_query_types_list(query_types)
-        self.collections_info = [reader.read_collection_info_file(file) for file in os.listdir(COLLECTION_INFO_DIR)]
+        self.collections_info = [reader.read_collection_info_file(file) for file in os.listdir(COLLECTION_INFO_DIR) if str(file).endswith(".json")]
         
         all_template_sets = []
         
@@ -33,9 +33,9 @@ class PromptGenerator:
             mappings = str(collection_info["mappings"])
             nle = str(collection_info["nle"])
             
-            prompt1 = prompt1.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
-            prompt2 = prompt2.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
-            prompt3 = prompt3.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
+            prompt1 = prompt1_template.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
+            prompt2 = prompt2_template.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
+            prompt3 = prompt3_template.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
             
             for query_type in self.query_types_list:
                 temp_prompt1 = prompt1.replace("TYPE_OF_QUERY", query_type)

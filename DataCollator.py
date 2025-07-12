@@ -29,7 +29,8 @@ class DataCollator:
                 filepath = os.path.join(OUTPUT_CSV_DIR, filename)
                 try:
                     # Extract the prefix
-                    prefix = filename.split('_')[0]
+                    parts = filename.split('_')
+                    prefix = "_".join(parts[:-2])
 
                     # Read the CSV file
                     df = pd.read_csv(filepath)

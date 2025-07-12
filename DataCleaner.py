@@ -165,7 +165,8 @@ class DataCleaner:
     def clean_prompt_output(self):
 
         for file in os.listdir(PROMPT_RESULT_DIR):
-            self.collection_name = file.split("_")[0]
+            parts = file.split("_")
+            self.collection_name = "_".join(parts[:-2])
             mappings = self.reader.read_collection_info_file(f"{self.collection_name}.json")["mappings"]
             self.db_error_file_name = DB_ERRORS_DIR / f"{self.collection_name}_invalid_queries.txt"
             try:

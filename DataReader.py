@@ -17,6 +17,11 @@ class DataReader:
         self.collection_info_dir = COLLECTION_INFO_DIR
 
     def _read_json_file(self, filename):
+        
+        if str(filename).split('.')[-1] != "json":
+            self.logger.error(f"File {filename} is not a JSON file.")
+            return False
+        
         try:
             with open(filename, 'r') as file:
                 data = json.load(file)
