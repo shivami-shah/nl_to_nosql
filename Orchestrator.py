@@ -55,17 +55,8 @@ class Orchestrator:
             self.logger.critical(f"An unexpected error occurred during processing {log_prefix}: {e}", exc_info=True)
             return False
 
-    def run_workflow(self):
-        self.logger.info("Starting LLM project workflow...")
+    def _generate_and_process_prompt_sets(self):
         
-        # Delete all files in error directories
-        for filename in ERROR_FILES_DIR.iterdir():
-            if filename.is_file():
-                os.remove(filename)
-        for filename in DB_ERRORS_DIR.iterdir():
-            if filename.is_file():
-                os.remove(filename)
-
         # 1. Generate all prompt sets
         self.logger.info("Generating chained prompt templates...")
         all_prompt_sets = self.prompt_generator.generate_prompts()
@@ -95,14 +86,29 @@ class Orchestrator:
                 
         self.logger.info(f"{successful_count} out of {len(all_prompt_sets)} prompt sets processed successfully.")
         
-        self.logger.info("Data cleaning started.")
-        self.data_cleaner.clean_prompt_output()
-        self.logger.info("Data cleaning completed.")
-        
-        self.logger.info("Data collation started.")
-        collator = DataCollator()
-        collator.collate_csv_to_excel()
-        collator.copy_system_to_user_output()
-        self.logger.info("Data collation completed.")
+    def run_workflow(self, generate_prompt_results = True, clean_results = True):
+        self.logger.info("Starting LLM project workflow...")
+                
+        if generate_prompt_results:
+            self.logger.info("Generating prompt results.")
+            self._generate_and_process_prompt_sets()
+            self.logger.info("Prompt results generated successfully.")
+            
+        if clean_results:
+            self.logger.info("Data cleaning started.")
+            self.data_cleaner.clean_prompt_output()
+            self.logger.info("Data cleaning completed.")
+            
+            self.logger.info("Data collation started.")
+            collator = DataCollator()
+            collator.collate_csv_to_excel()
+            collator.copy_system_to_user_output()
+            self.logger.info("Data collation completed.")
     
         return True
+
+
+if __name__ == "__main__":
+    orchestrator = Orchestrator()
+    orchestrator.run_workflow(generate_prompt_results = True, clean_results = True)
+    

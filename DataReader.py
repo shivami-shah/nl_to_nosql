@@ -45,8 +45,8 @@ class DataReader:
             self.logger.error(f"Failed to read secrets file {filename}: {str(e)}")
             raise
 
-    def read_query_types_file(self):
-        return self._read_json_file(QUERY_TYPES_FILE)
+    def read_query_types_file(self, file=QUERY_TYPES_FILE):
+        return self._read_json_file(file)
 
     def read_collection_info_file(self, collection_file_name):
         collection_info_path = f"{self.collection_info_dir}/{collection_file_name}"

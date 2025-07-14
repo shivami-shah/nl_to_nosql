@@ -82,7 +82,6 @@ class DBManager:
         - Check syntax
         - Run the query
         """
-        db = self.db
         query_str = textwrap.dedent(query_str)
 
         if attempt_fix:

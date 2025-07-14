@@ -9,14 +9,21 @@ class PromptGenerator:
     def __init__(self):
         COLLECTION_INFO_DIR.mkdir(exist_ok=True)
     
-    def _create_query_types_list(self, query_types:dict) -> list:
+    def _create_query_types_list(self, query_types:list) -> list:
         self.query_types_list = []
-        for query_type in query_types:
-            section_title = query_type["section"]
-            for subsection_title in query_type["subsections"]:
-                self.query_types_list.append(f"{section_title}\n{subsection_title}")
+        
+        for item in query_types:
+            section = item["section"]
+            subsections = item["subsections"]
+            examples = item["examples"]
+            
+            for i in range(len(subsections)):
+                self.query_types_list.append({
+                    "section": section,
+                    "subsection": subsections[i],
+                    "example": examples[i]
+                })
 
-    
     def generate_prompts(self):        
         reader = DataReader()
         prompt1_template, prompt2_template, prompt3_template = reader.read_prompts_files()
@@ -38,13 +45,16 @@ class PromptGenerator:
             prompt3 = prompt3_template.replace("COLLECTION_NAME", collection_name).replace("SCHEMA", schema).replace("NLE", nle)
             
             for query_type in self.query_types_list:
-                temp_prompt1 = prompt1.replace("TYPE_OF_QUERY", query_type)
-                temp_prompt2 = prompt2.replace("TYPE_OF_QUERY", query_type)
-                temp_prompt3 = prompt3.replace("TYPE_OF_QUERY", query_type)
+                final_prompt1 = prompt1.replace("TYPE_OF_QUERY", f'{query_type["section"]}\n{query_type["subsection"]}')
+                final_prompt2 = prompt2.replace("TYPE_OF_QUERY", f'{query_type["section"]}\n{query_type["subsection"]}')
+                final_prompt3 = prompt3.replace("TYPE_OF_QUERY", f'{query_type["section"]}\n{query_type["subsection"]}')
+                final_prompt1 = final_prompt1.replace("EXAMPLE", f'{query_type["example"]}')
+                final_prompt2 = final_prompt2.replace("EXAMPLE", f'{query_type["example"]}')
+                final_prompt3 = final_prompt3.replace("EXAMPLE", f'{query_type["example"]}')
                 
                 all_template_sets.append({"collection" : collection_name, "query_type": query_type,
-                                          "prompt1": temp_prompt1, "prompt2": temp_prompt2, 
-                                          "prompt3": temp_prompt3}
+                                          "prompt1": final_prompt1, "prompt2": final_prompt2, 
+                                          "prompt3": final_prompt3}
                                         )
             self.logger.info(f"Generated queries templates for {collection_name}")
         self.logger.info(f"Finished generating queries templates")

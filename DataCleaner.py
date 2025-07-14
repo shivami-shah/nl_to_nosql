@@ -57,8 +57,9 @@ class DataCleaner:
         except Exception as e:
             self.logger.error(f"Failed to write data to {filename}: {str(e)}")
 
-    def write_prompt_output(self, collection_name: str, query_type:str, output: str):
-        numbers = re.findall(r'\d+', query_type.replace(".", ""))
+    def write_prompt_output(self, collection_name: str, query_type: dict, output: str):
+        query_type_str = str(query_type["section"]) + str(query_type["subsection"])
+        numbers = re.findall(r'\d+', query_type_str.replace(".", ""))
         query_type = '_'.join(numbers)
         file_name = PROMPT_RESULT_DIR / f"{collection_name}_{query_type}.txt"
         self._write_to_file(output, file_name)
@@ -73,6 +74,7 @@ class DataCleaner:
     def _validate_queries(self, file:str, mappings:dict):
         invalid_queries = []
         for i, query in enumerate(self.queries):
+            self.logger.info(f"Processing query number {i+1} of {len(self.queries)}: {query}")
             if query.startswith("db."):
                 
                 # Replace actual field names from mappings
@@ -82,6 +84,7 @@ class DataCleaner:
 
                 validated_query = self.db_manager.validate_query(mapped_query)
                 if not validated_query:
+                    self.logger.info(f"Invalid query: {mapped_query}")
                     invalid_queries.append(mapped_query)
                     self.queries[i] = ""
             else:
@@ -161,10 +164,49 @@ class DataCleaner:
         if len(missing_questions_answers)>0:
             missing_questions_answers_str = f"\nMISSING QUESTIONS OR ANSWERS-{file}:" + '\n' + '\n'.join(missing_questions_answers) + "\n"
             self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
-            
-    def clean_prompt_output(self):
-
+    
+    def clean_file_names(self):
         for file in os.listdir(PROMPT_RESULT_DIR):
+            self.prompt_result_files = []
+            for filename in os.listdir(PROMPT_RESULT_DIR):
+                parts = filename.split('_')
+                parts = parts[:4]
+                if '.' in parts[-1]:
+                    parts[-1] = parts[-1].split('.')[0]
+                new_filename = "_".join(parts) + ".txt"
+                old_path = os.path.join(PROMPT_RESULT_DIR, filename)
+                new_path = os.path.join(PROMPT_RESULT_DIR, new_filename)
+                if not os.path.exists(new_path):
+                    os.rename(old_path, new_path)
+                    self.logger.info(f"Renamed file {old_path} to {new_path}")                
+                self.prompt_result_files.append(new_filename)
+        self.logger.info("File names cleaned successfully.")
+        
+    def filter_files(self):
+        query_types = self.reader.read_query_types_file()
+        files_filter = []
+        for section_info in query_types:
+            section = section_info["section"]
+            for subsection in section_info["subsections"]:
+                suffix = "_" + "".join(re.findall(r'\d', section)) \
+                    + "_" + "".join(re.findall(r'\d', subsection)) \
+                    + ".txt"
+                files_filter.append(suffix)
+        
+        files_to_process = []
+        for file_suffix in files_filter:
+            for file in self.prompt_result_files:
+                if file.endswith(file_suffix):
+                    files_to_process.append(file)
+                    break
+                
+        return files_to_process
+        
+    def clean_prompt_output(self):        
+        self.clean_file_names()
+        files_to_process = self.filter_files()
+        
+        for file in files_to_process:
             parts = file.split("_")
             self.collection_name = "_".join(parts[:-2])
             mappings = self.reader.read_collection_info_file(f"{self.collection_name}.json")["mappings"]
@@ -203,13 +245,13 @@ class DataCleaner:
 
 
 if __name__ == "__main__":
-    # Delete all files in error directories
-    for filename in ERROR_FILES_DIR.iterdir():
-        if filename.is_file():
-            os.remove(filename)
-    for filename in DB_ERRORS_DIR.iterdir():
-        if filename.is_file():
-            os.remove(filename)
+    # # Delete all files in error directories
+    # for filename in ERROR_FILES_DIR.iterdir():
+    #     if filename.is_file():
+    #         os.remove(filename)
+    # for filename in DB_ERRORS_DIR.iterdir():
+    #     if filename.is_file():
+    #         os.remove(filename)
             
     cleaner = DataCleaner()
     cleaner.clean_prompt_output()
