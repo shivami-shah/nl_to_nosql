@@ -4,7 +4,7 @@ import os
 from config import (
     PROMPT_RESULT_DIR, OUTPUT_DIR,
     ERROR_FILES_DIR, DB_ERRORS_DIR,
-    OUTPUT_CSV_DIR)
+    OUTPUT_CSV_DIR, COLLECTION_INFO_DIR)
 from project_logger import setup_project_logger
 from DataReader import DataReader
 from DBManager import DBManager
@@ -74,7 +74,7 @@ class DataCleaner:
     def _validate_queries(self, file:str, mappings:dict):
         invalid_queries = []
         for i, query in enumerate(self.queries):
-            self.logger.info(f"Processing query number {i+1} of {len(self.queries)}: {query}")
+            self.logger.info(f"Processing query number {i+1} of {len(self.queries)}")
             if query.startswith("db."):
                 
                 # Replace actual field names from mappings
@@ -166,36 +166,48 @@ class DataCleaner:
             self._append_to_file(missing_questions_answers_str, self.db_error_file_name)
     
     def clean_file_names(self):
-        for file in os.listdir(PROMPT_RESULT_DIR):
-            self.prompt_result_files = []
-            for filename in os.listdir(PROMPT_RESULT_DIR):
-                parts = filename.split('_')
-                parts = parts[:4]
-                if '.' in parts[-1]:
-                    parts[-1] = parts[-1].split('.')[0]
-                new_filename = "_".join(parts) + ".txt"
-                old_path = os.path.join(PROMPT_RESULT_DIR, filename)
-                new_path = os.path.join(PROMPT_RESULT_DIR, new_filename)
-                if not os.path.exists(new_path):
-                    os.rename(old_path, new_path)
-                    self.logger.info(f"Renamed file {old_path} to {new_path}")                
-                self.prompt_result_files.append(new_filename)
+        prompt_result_files = []
+        for filename in os.listdir(PROMPT_RESULT_DIR):
+            parts = filename.split('_')
+            parts = parts[:4]
+            if '.' in parts[-1]:
+                parts[-1] = parts[-1].split('.')[0]
+            new_filename = "_".join(parts) + ".txt"
+            old_path = os.path.join(PROMPT_RESULT_DIR, filename)
+            new_path = os.path.join(PROMPT_RESULT_DIR, new_filename)
+            if not os.path.exists(new_path):
+                os.rename(old_path, new_path)
+                self.logger.info(f"Renamed file {old_path} to {new_path}")                
+            prompt_result_files.append(new_filename)
         self.logger.info("File names cleaned successfully.")
+        return prompt_result_files
         
-    def filter_files(self):
+    def filter_files(self, files):
         query_types = self.reader.read_query_types_file()
-        files_filter = []
+        
+        files_prefixes = []
+        for file in os.listdir(COLLECTION_INFO_DIR):
+            files_prefixes.append(file.replace(".json", ""))
+        
+        files_suffixes = []
         for section_info in query_types:
             section = section_info["section"]
             for subsection in section_info["subsections"]:
                 suffix = "_" + "".join(re.findall(r'\d', section)) \
                     + "_" + "".join(re.findall(r'\d', subsection)) \
                     + ".txt"
-                files_filter.append(suffix)
+                files_suffixes.append(suffix)
+        
+        prefix_filtered_files = []
+        for file in files:
+            for file_prefix in files_prefixes:
+                if file.startswith(file_prefix):
+                    prefix_filtered_files.append(file)
+                    break        
         
         files_to_process = []
-        for file_suffix in files_filter:
-            for file in self.prompt_result_files:
+        for file in prefix_filtered_files:
+            for file_suffix in files_suffixes:
                 if file.endswith(file_suffix):
                     files_to_process.append(file)
                     break
@@ -203,8 +215,8 @@ class DataCleaner:
         return files_to_process
         
     def clean_prompt_output(self):        
-        self.clean_file_names()
-        files_to_process = self.filter_files()
+        files = self.clean_file_names()
+        files_to_process = self.filter_files(files)
         
         for file in files_to_process:
             parts = file.split("_")
