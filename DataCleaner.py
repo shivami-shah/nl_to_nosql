@@ -114,8 +114,8 @@ class DataCleaner:
         
         for query in self.queries:
             try:
-                questions_index = next(i for i, q in enumerate(self.questions) if query.lower() in q.lower())
-                answers_index = next(i for i, q in enumerate(self.answers) if query.lower() in q.lower())
+                questions_query_index = next(i for i, q in enumerate(self.questions) if query.lower() in q.lower())
+                answers_query_index = next(i for i, q in enumerate(self.answers) if query.lower() in q.lower())
             except StopIteration:
                 self.logger.warning(f"No question found with query: {query}")
                 missing_questions_answers.append(query)
@@ -124,9 +124,9 @@ class DataCleaner:
             questions_list = []
             answers_list = []
             
-            temp_indexes = [i for i in newlines_questions if i > questions_index]
+            temp_indexes = [i for i in newlines_questions if i > questions_query_index]
             next_question_index = min(temp_indexes) if temp_indexes else len(self.questions)-1
-            temp_indexes = [i for i in newlines_answers if i > answers_index]
+            temp_indexes = [i for i in newlines_answers if i > answers_query_index]
             next_answer_index = min(temp_indexes) if temp_indexes else len(self.answers)-1
             
             if next_question_index + 1 == len(self.questions):
@@ -134,8 +134,8 @@ class DataCleaner:
             if next_answer_index + 1 == len(self.answers):
                 next_answer_index += 1            
             
-            questions_list = self.questions[questions_index:next_question_index]
-            answers_list = self.answers[answers_index:next_answer_index]
+            questions_list = self.questions[questions_query_index:next_question_index]
+            answers_list = self.answers[answers_query_index:next_answer_index]
             
             questions_list = [q for q in questions_list if "Question" in q]
             questions_list = [q.replace("*", "").strip() for q in questions_list]
@@ -150,6 +150,11 @@ class DataCleaner:
                     parts = line.split(':')
                     cleaned_answers_list.append(':'.join(parts[1:]).strip())
             answers_list = cleaned_answers_list
+            
+            if not answers_list:
+                self.logger.warning(f"No answer found with query: {query}")
+                missing_questions_answers.append(query)
+                continue
             
             extra_questions = len(questions_list) - len(answers_list)
             answers_list_extra = [answers_list[0]] * extra_questions
