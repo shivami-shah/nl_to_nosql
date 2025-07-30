@@ -29,7 +29,8 @@ QUERY_TYPES_FILE = QUERIES_DIR / "query_types.json"
 PERMENANT_QUERY_TYPES_FILE = QUERIES_DIR / "query_types_perm.json"
 PROMPT1_FILE = QUERIES_DIR / "sql_query_generation.secrets"
 PROMPT2_FILE = QUERIES_DIR / "question_generation.secrets"
-PROMPT3_FILE = QUERIES_DIR / "answer_generation.secrets"
+PROMPT3_FILE = QUERIES_DIR / "search_terms_generation.secrets"
+PROMPT4_FILE = QUERIES_DIR / "answer_generation.secrets"
 
 
 #----------------------------- DB CONNECTION ----------------------------

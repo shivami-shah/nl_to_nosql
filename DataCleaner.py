@@ -66,10 +66,12 @@ class DataCleaner:
     
     def _seperate_sections(self):
         queries_end_index = self.content.index("QUESTIONS")
-        questions_end_index = self.content.index("ANSWERS")            
+        questions_end_index = self.content.index("SEARCHES")
+        searches_end_index = self.content.index("ANSWERS")
         self.queries = self.content[:queries_end_index].split('\n')
         self.questions = self.content[queries_end_index:questions_end_index].split('\n')[1:]
-        self.answers = self.content[questions_end_index:].split('\n')[1:]
+        self.search_terms = self.content[questions_end_index:searches_end_index].split('\n')[1:]
+        self.answers = self.content[searches_end_index:].split('\n')[1:]
         
     def _validate_queries(self, file:str, mappings:dict):
         invalid_queries = []
@@ -99,10 +101,14 @@ class DataCleaner:
     def _extract_to_lists(self, file):
                 
         newlines_questions = []
+        newlines_search_terms = []
         newlines_answers = []
         for i, text in enumerate(self.questions):
             if len(text) == 0:
-                newlines_questions.append(i)                    
+                newlines_questions.append(i)
+        for i, text in enumerate(self.search_terms):
+            if len(text) == 0:
+                newlines_search_terms.append(i)                    
         for i, text in enumerate(self.answers):
             if len(text) == 0:
                 newlines_answers.append(i)
@@ -115,6 +121,7 @@ class DataCleaner:
         for query in self.queries:
             try:
                 questions_query_index = next(i for i, q in enumerate(self.questions) if query.lower() in q.lower())
+                search_terms_query_index = next(i for i, q in enumerate(self.search_terms) if query.lower() in q.lower())
                 answers_query_index = next(i for i, q in enumerate(self.answers) if query.lower() in q.lower())
             except StopIteration:
                 self.logger.warning(f"No question found with query: {query}")
@@ -122,27 +129,41 @@ class DataCleaner:
                 continue
                        
             questions_list = []
+            search_terms_list = []
             answers_list = []
             
             temp_indexes = [i for i in newlines_questions if i > questions_query_index]
             next_question_index = min(temp_indexes) if temp_indexes else len(self.questions)-1
+            
+            temp_indexes = [i for i in newlines_search_terms if i > search_terms_query_index]
+            next_search_terms_index = min(temp_indexes) if temp_indexes else len(self.search_terms)-1
+            
             temp_indexes = [i for i in newlines_answers if i > answers_query_index]
             next_answer_index = min(temp_indexes) if temp_indexes else len(self.answers)-1
             
             if next_question_index + 1 == len(self.questions):
                 next_question_index += 1
+                
+            if next_search_terms_index + 1 == len(self.search_terms):
+                next_search_terms_index += 1
+            
             if next_answer_index + 1 == len(self.answers):
                 next_answer_index += 1            
             
             questions_list = self.questions[questions_query_index:next_question_index]
+            search_terms_list = self.search_terms[search_terms_query_index:next_search_terms_index]
             answers_list = self.answers[answers_query_index:next_answer_index]
             
             questions_list = [q for q in questions_list if "Question" in q]
             questions_list = [q.replace("*", "").strip() for q in questions_list]
             questions_list = [q.split(":")[1].strip() for q in questions_list]
-
             questions_list_append = ([c.split(":")[1].strip() for c in answers_list if "Question" in c])
             questions_list += questions_list_append
+            questions_list = list(set(questions_list))
+            
+            search_terms_list = [t for t in search_terms_list if "Search Term" in t]
+            search_terms_list = [t.replace("*", "").strip() for t in search_terms_list]
+            search_terms_list = [t.split(":")[1].strip() for t in search_terms_list]
             
             cleaned_answers_list = []
             for line in answers_list:
@@ -157,12 +178,14 @@ class DataCleaner:
                 continue
             
             extra_questions = len(questions_list) - len(answers_list)
-            answers_list_extra = [answers_list[0]] * extra_questions
+            extra_search_terms = len(search_terms_list)
+            answers_list_extra = ([answers_list[0]] * extra_questions) + ([answers_list[-1]] * extra_search_terms)
             answers_list += answers_list_extra
             
-            query_list = [query]*len(questions_list)
+            query_list = [query]*len(answers_list)
             
             self.all_questions_list += questions_list
+            self.all_questions_list += search_terms_list
             self.all_answers_list += answers_list
             self.all_queries_list += query_list
         
@@ -269,6 +292,6 @@ if __name__ == "__main__":
     # for filename in DB_ERRORS_DIR.iterdir():
     #     if filename.is_file():
     #         os.remove(filename)
-            
+    
     cleaner = DataCleaner()
     cleaner.clean_prompt_output()

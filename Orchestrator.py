@@ -28,19 +28,22 @@ class Orchestrator:
         prompt1 = prompt_set["prompt1"]
         prompt2 = prompt_set["prompt2"]
         prompt3 = prompt_set["prompt3"]
+        prompt4 = prompt_set["prompt4"]
 
         log_prefix = f"Collection: {collection_name}, Query Type: {query_type}"
         self.logger.info(f"--- Starting processing for {log_prefix}")
 
         try:
             # 2. Send chained prompts to LLM and get final response
-            output_prompt1, output_prompt2, output_prompt3 = self.query_generator.send_chained_prompts_to_llm(
-                prompt1, prompt2, prompt3,
+            output_prompt1, output_prompt2, output_prompt3, output_prompt4 = self.query_generator.send_chained_prompts_to_llm(
+                prompt1, prompt2, prompt3, prompt4,
                 delay_between_steps_seconds=2 # Adjust delay as needed
             )
             
-            if output_prompt1 and output_prompt2 and output_prompt3:
-                output = f"QUERIES:\n{output_prompt1}\nQUESTIONS:\n{output_prompt2}\nANSWERS:\n{output_prompt3}"
+            if output_prompt1 and output_prompt2 and output_prompt3 and output_prompt4:
+                
+                output = f'''QUERIES:\n{output_prompt1}\nQUESTIONS:\n{output_prompt2}\nSEARCHES:\n{output_prompt3}\nANSWERS:\n{output_prompt4}'''
+                
                 self.data_cleaner.write_prompt_output(collection_name, query_type, output)
                 self.logger.info(f"--- Finished processing and data written for {log_prefix}")
                 return True
@@ -56,6 +59,9 @@ class Orchestrator:
             return False
 
     def _generate_and_process_prompt_sets(self):
+        """
+        Generate and process all prompt sets concurrently.
+        """
         
         # 1. Generate all prompt sets
         self.logger.info("Generating chained prompt templates...")
@@ -110,5 +116,5 @@ class Orchestrator:
 
 if __name__ == "__main__":
     orchestrator = Orchestrator()
-    orchestrator.run_workflow(generate_prompt_results = True, clean_results = True)
+    orchestrator.run_workflow(generate_prompt_results = True, clean_results = False)
     

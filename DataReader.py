@@ -2,7 +2,7 @@ import json
 import csv
 from project_logger import setup_project_logger
 from config import(
-    QUERY_TYPES_FILE, PROMPT1_FILE, PROMPT2_FILE, PROMPT3_FILE,
+    QUERY_TYPES_FILE, PROMPT1_FILE, PROMPT2_FILE, PROMPT3_FILE, PROMPT4_FILE,
     COLLECTION_INFO_DIR, PROMPT_RESULT_DIR
 )
 
@@ -14,10 +14,19 @@ class DataReader:
         self.prompt1_file = PROMPT1_FILE
         self.prompt2_file = PROMPT2_FILE
         self.prompt3_file = PROMPT3_FILE
+        self.prompt4_file = PROMPT4_FILE
         self.collection_info_dir = COLLECTION_INFO_DIR
 
     def _read_json_file(self, filename):
-        
+        """Reads a JSON file and returns its content.
+
+        Args:
+            filename (str): The path to the JSON file.
+
+        Returns:
+            data (dict): The content of the JSON file.
+
+        """
         if str(filename).split('.')[-1] != "json":
             self.logger.error(f"File {filename} is not a JSON file.")
             return False
@@ -56,7 +65,8 @@ class DataReader:
         prompt1 = self._read_file(PROMPT1_FILE)
         prompt2 = self._read_file(PROMPT2_FILE)
         prompt3 = self._read_file(PROMPT3_FILE)
-        return prompt1, prompt2, prompt3
+        prompt4 = self._read_file(PROMPT4_FILE)
+        return prompt1, prompt2, prompt3, prompt4
     
     def read_prompt_output_file(self, filename):
         return self._read_file(PROMPT_RESULT_DIR / filename)
